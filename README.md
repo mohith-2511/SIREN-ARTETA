@@ -1,4 +1,4 @@
-# BEVIMS — Bengaluru Emergency Vehicle Intelligence & Monitoring System
+# SIREN - Smart Intelligent Response & Emergency Network 
 
 Real-time emergency-vehicle tracking and decision support. FastAPI + WebSocket backend, SQLite via SQLAlchemy, Leaflet/OpenStreetMap dashboard.
 
