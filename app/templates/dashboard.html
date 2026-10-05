@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BEVIMS · Bengaluru Emergency Vehicle Control Center</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#0a0e14;--panel:#0f1520;--line:#1d2838;--tx:#d7e0ec;--dim:#7d8ba1;--green:#2ecc71;--blue:#3b9eff;--red:#ff3b4e;--amber:#ff9f1c;--grey:#6b7280}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:13px/1.4 "Segoe UI",system-ui,sans-serif;display:grid;grid-template-rows:46px 1fr 30px}
+header{display:flex;align-items:center;gap:16px;padding:0 14px;border-bottom:1px solid var(--line);background:#0c121b}
+header h1{font-size:14px;margin:0;font-weight:600;letter-spacing:.04em}
+.sp{flex:1}.pill{padding:2px 9px;border:1px solid var(--line);border-radius:3px;font-size:11px;color:var(--dim)}
+.pill.demo{color:var(--amber);border-color:#5a3d0a}
+#live{display:flex;align-items:center;gap:7px;font-weight:600}
+#live i{width:9px;height:9px;border-radius:50%;background:var(--grey)}
+#live.on i{background:var(--red);box-shadow:0 0 0 0 rgba(255,59,78,.7);animation:pulse 1.4s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(255,59,78,0)}}
+@media(prefers-reduced-motion:reduce){#live.on i{animation:none}}
+main{display:grid;grid-template-columns:290px 1fr 370px;min-height:0}
+aside{background:var(--panel);overflow:auto;min-height:0}
+#left{border-right:1px solid var(--line)}#right{border-left:1px solid var(--line)}
+h2{font-size:11px;font-weight:600;color:var(--dim);margin:0;padding:10px 12px 6px;letter-spacing:.05em}
+.v{display:grid;grid-template-columns:10px 1fr auto;gap:2px 10px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;border-left:3px solid transparent}
+.v:hover{background:#131c2a}.v.sel{background:#16233a;border-left-color:var(--blue)}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:4px}
+.v b{font-size:14px}.v small{color:var(--dim)}.v .eta{text-align:right;font-variant-numeric:tabular-nums}
+.tag{font-size:10px;padding:1px 5px;border-radius:2px;background:#2a1216;color:#ff8a96;margin-left:6px}
+#mapwrap{position:relative;min-height:0}#map{position:absolute;inset:0;background:#0a0e14}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
+#layers{position:absolute;z-index:1000;top:10px;right:10px;background:rgba(15,21,32,.92);border:1px solid var(--line);padding:8px 10px;border-radius:4px}
+#layers label{display:block;font-size:12px;cursor:pointer;padding:1px 0}
+.amb{position:relative;width:34px;height:34px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;color:#fff;font:700 11px "Segoe UI";box-shadow:0 0 10px rgba(0,0,0,.7)}
+.amb .ar{position:absolute;inset:-9px;display:grid;place-items:start center;font-size:11px;pointer-events:none}
+.amb.sel{outline:3px solid #fff;outline-offset:2px}
+.hosp{background:#fff;color:#c1121f;border-radius:3px;width:22px;height:22px;display:grid;place-items:center;font-weight:900;border:2px solid #c1121f}
+.sec{padding:10px 12px;border-bottom:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.k{font-size:10px;color:var(--dim);letter-spacing:.04em}.val{font-size:15px;font-variant-numeric:tabular-nums}
+.warn{color:var(--amber)}.crit{color:var(--red)}.ok{color:var(--green)}
+canvas{width:100%;height:46px;background:#0b111a;border:1px solid var(--line);margin-top:3px}
+.ai{background:#0d1a2b;border:1px solid #1f3a5f;padding:9px 10px;border-radius:3px;line-height:1.5}
+.alt{display:grid;grid-template-columns:auto 1fr auto;gap:8px;padding:5px 8px;border:1px solid var(--line);margin-top:5px;border-radius:3px}
+.alt.rec{border-color:var(--green);background:#0e2418}
+.bk{border:1px solid #7a2a32;background:#2a1216;padding:9px 10px;border-radius:3px;margin-top:8px}
+button{background:#16233a;color:var(--tx);border:1px solid #2a3d5c;padding:6px 8px;border-radius:3px;cursor:pointer;font:inherit}
+button:hover{background:#1d3150}button:focus-visible,.v:focus-visible{outline:2px solid var(--blue)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#alerts div{padding:5px 12px;border-bottom:1px solid #141c28;font-size:12px}#alerts time{color:var(--dim);margin-right:7px;font-variant-numeric:tabular-nums}
+footer{display:flex;gap:22px;align-items:center;padding:0 14px;border-top:1px solid var(--line);background:#0c121b;font-size:12px;color:var(--dim);overflow:hidden;white-space:nowrap}
+footer b{color:var(--tx)}
+@media(max-width:1100px){body{grid-template-rows:46px auto 30px;height:auto}main{grid-template-columns:1fr;grid-template-rows:260px 60vh auto}#left{border:0;border-bottom:1px solid var(--line)}#right{border:0}}
+</style></head><body>
+<header><h1>BENGALURU EMERGENCY VEHICLE CONTROL CENTER</h1><span class="pill" id="mode">…</span><span class="pill" id="tper"></span><span class="sp"></span>
+<span id="live"><i></i><span id="livetxt">CONNECTING</span></span></header>
+<main>
+<aside id="left"><h2>VEHICLES</h2><div id="vlist"></div></aside>
+<div id="mapwrap"><div id="map"></div><div id="layers"></div></div>
+<aside id="right">
+ <div id="detail"><div class="sec" style="color:var(--dim)">Select a vehicle on the list or map.</div></div>
+ <h2>DEMO SCENARIO <span id="scnote" style="font-weight:400"></span></h2>
+ <div class="sec"><div class="btns" id="scn"></div></div>
+ <h2>ALERTS</h2><div id="alerts"></div>
+</aside>
+</main>
+<footer id="foot"></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $=s=>document.querySelector(s), COL={available:'#2ecc71',en_route:'#3b9eff',deviation:'#ff3b4e',delayed:'#ff9f1c',offline:'#6b7280'};
+const LBL={available:'Available',en_route:'En route',deviation:'Emergency / deviation',delayed:'Delayed',offline:'Offline'};
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const map=L.map('map').setView([12.9716,77.5946],11);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+const LAY=[['amb','Ambulances'],['planned','Planned routes'],['trail','Actual trajectories'],['rec','Recommended routes'],['hosp','Hospitals'],['traffic','Traffic (simulated)'],['inc','Incidents'],['dev','Deviation zones']];
+const G={};LAY.forEach(([k,l])=>{G[k]=L.layerGroup().addTo(map);const e=document.createElement('label');e.innerHTML=`<input type="checkbox" checked> ${l}`;
+ e.firstChild.onchange=ev=>ev.target.checked?G[k].addTo(map):map.removeLayer(G[k]);$('#layers').appendChild(e)});
+L.DomEvent.disableClickPropagation($('#layers'));
+let S={v:{},sel:null,mk:{},trail:{},planned:{},rid:{},rec:{},snapAt:0,last:null};
+fetch('/api/hospitals').then(r=>r.json()).then(h=>h.forEach(x=>L.marker([x.lat,x.lon],{icon:L.divIcon({className:'',html:'<div class="hosp">+</div>',iconSize:[22,22]})}).bindTooltip(x.name).addTo(G.hosp)));
+[['normal','Normal operation'],['congestion','Simulate congestion'],['accident','Simulate accident'],['deviation','Simulate route deviation'],['failure','Simulate ambulance failure'],['critical_delay','Simulate critical delay']]
+ .forEach(([n,l])=>{const b=document.createElement('button');b.textContent=l;b.onclick=()=>scenario(n);$('#scn').appendChild(b)});
+async function scenario(n){const r=await fetch('/api/scenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,vehicle_id:S.sel})});
+ $('#scnote').textContent=r.ok?'':'(needs simulation mode)'}
+function icon(v){const sel=v.id===S.sel?' sel':'';return L.divIcon({className:'',iconSize:[34,34],html:`<div class="amb${sel}" style="background:${COL[v.status]}"><span class="ar" style="transform:rotate(${v.heading}deg)">▲</span>${v.id.slice(-3)}</div>`})}
+function pick(id){S.sel=id;const v=S.v[id];if(v&&v.lat)map.panTo([v.lat,v.lon]);draw();}
+function draw(){renderList();renderDetail();for(const id in S.v){const m=S.mk[id];if(m)m.setIcon(icon(S.v[id]))}}
+function renderList(){$('#vlist').innerHTML=Object.values(S.v).map(v=>`<div class="v${v.id===S.sel?' sel':''}" tabindex="0" onclick="pick('${esc(v.id)}')">
+ <span class="dot" style="background:${COL[v.status]}"></span><div><b>${esc(v.id)}</b>${v.emergency?'<span class="tag">EMERGENCY</span>':''}<br><small>${LBL[v.status]}${v.destination?' → '+esc(v.destination):''}</small></div>
+ <div class="eta">${v.current_eta?'ETA '+v.current_eta:''}<br><small class="${v.delay_min>=3?'warn':''}">${v.current_eta?(v.delay_min>=1?'+'+Math.round(v.delay_min)+' min':'on time'):''}</small></div></div>`).join('')}
+function spark(c,data,color){const x=c.getContext('2d'),w=c.width=c.clientWidth*2,h=c.height=92;x.clearRect(0,0,w,h);const d=data.filter(a=>a!=null);if(d.length<2)return;
+ const mn=Math.min(...d),mx=Math.max(...d),r=(mx-mn)||1;x.strokeStyle=color;x.lineWidth=2;x.beginPath();d.forEach((a,i)=>{const px=i/(d.length-1)*w,py=h-6-(a-mn)/r*(h-12);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();
+ x.fillStyle='#7d8ba1';x.font='18px Segoe UI';x.fillText(d[d.length-1].toFixed(1),6,18)}
+function renderDetail(){const v=S.v[S.sel];if(!v)return;const d=v.dev,c=v.cause;
+ $('#detail').innerHTML=`<div class="sec"><div style="display:flex;justify-content:space-between"><b style="font-size:18px">${esc(v.id)}</b><span style="color:${COL[v.status]}">● ${LBL[v.status]}</span></div>
+ <small style="color:var(--dim)">${esc(v.road)} · ${v.online?'LIVE · last update <span id="age"></span>':'<b class="crit">OFFLINE</b> · last seen <span id="age"></span>'}</small></div>
+ <div class="sec grid"><div><div class="k">SPEED</div><div class="val">${v.speed} km/h</div></div><div><div class="k">HEADING</div><div class="val">${v.heading}°</div></div>
+ <div><div class="k">DESTINATION</div><div class="val" style="font-size:13px">${esc(v.destination||'—')}</div></div><div><div class="k">ROUTE KM planned / travelled</div><div class="val">${v.planned_km??'—'} / ${v.travelled_km}</div></div>
+ <div><div class="k">PLANNED ETA</div><div class="val">${v.planned_eta||'—'}</div></div><div><div class="k">CURRENT ETA</div><div class="val">${v.current_eta||'—'}</div></div>
+ <div><div class="k">DELAY</div><div class="val ${v.delay_min>=10?'crit':v.delay_min>=3?'warn':''}">${v.current_eta?(v.delay_min>0?'+':'')+v.delay_min.toFixed(0)+' min':'—'}</div></div>
+ <div><div class="k">DEVIATION</div><div class="val ${d.deviated?'crit':''}">${d.distance_m.toFixed(0)} m${d.deviated?' ⚠':''}</div></div>
+ <div><div class="k">CAUSE (predicted)</div><div class="val" style="font-size:13px">${c?esc(c.label):'—'}</div></div><div><div class="k">CONFIDENCE (heuristic)</div><div class="val" style="font-size:13px">${c?(c.cause==='unknown'?'Low':Math.round(c.confidence*100)+'%'):'—'}</div></div>
+ <div><div class="k">OFF-ROUTE TIME</div><div class="val">${d.off_seconds.toFixed(0)} s</div></div><div><div class="k">HEADING Δ vs route</div><div class="val">${d.heading_diff.toFixed(0)}°</div></div></div>
+ <div class="sec"><div class="k">TELEMETRY · speed km/h</div><canvas id="c1"></canvas><div class="k" style="margin-top:6px">distance travelled km</div><canvas id="c2"></canvas><div class="k" style="margin-top:6px">ETA remaining min</div><canvas id="c3"></canvas></div>
+ <div class="sec"><div class="k">AI ANALYSIS ${v.explanation?'':''}</div>${v.explanation?`<div class="ai">${esc(v.explanation)}</div>`:'<div style="color:var(--dim)">No anomalies detected.</div>'}
+ ${v.alts.length?'<div class="k" style="margin-top:8px">ALTERNATIVE ROUTES'+(v.alts[0].source==='fallback'?' (FALLBACK ESTIMATE — OSRM unreachable)':'')+'</div>'+v.alts.map(a=>`<div class="alt${a.recommended?' rec':''}"><b>${a.label}</b><span>${a.eta_min} min · ${a.distance_km} km · ${a.traffic}</span><span>${a.recommended?'★ BEST':a.score}</span></div>`).join(''):''}
+ ${v.backup?`<div class="bk"><b class="crit">⚠ BACKUP VEHICLE RECOMMENDED</b><br>Primary: ${esc(v.id)} · delay +${v.backup.delay_min} min<br>Recommended backup: <b>${esc(v.backup.backup_id)}</b><br>Distance ${v.backup.distance_km} km · est. response ${v.backup.response_min} min<br><small>${esc(v.backup.reason)}<br>Recommendation only — operator decides.</small></div>`:''}</div>`;
+ const h=v.hist;spark($('#c1'),h.map(a=>a[0]),'#3b9eff');spark($('#c2'),h.map(a=>a[1]),'#2ecc71');spark($('#c3'),h.map(a=>a[2]),'#ff9f1c');tickAge()}
+function tickAge(){const v=S.v[S.sel],e=$('#age');if(v&&e&&v.age_s!=null)e.textContent=(v.age_s+(Date.now()-S.snapAt)/1000).toFixed(1)+' seconds ago';
+ const on=S.last&&Date.now()-S.snapAt<3500;$('#live').className=on?'on':'';$('#livetxt').textContent=on?'LIVE':S.last?'STALE':'CONNECTING'}
+setInterval(tickAge,200);
+function update(s){S.snapAt=Date.now();S.last=s;const sys=s.system;
+ $('#mode').textContent=sys.mode;$('#mode').className='pill'+(sys.simulation?' demo':'');$('#tper').textContent=`TRAFFIC MODEL: SIMULATED · ${sys.traffic_period.replace('_',' ')} ×${sys.traffic_multiplier}`;
+ s.vehicles.forEach(v=>{S.v[v.id]=v;if(v.lat==null)return;const to=[v.lat,v.lon];let m=S.mk[v.id];
+  if(!m){m=S.mk[v.id]=L.marker(to,{icon:icon(v),zIndexOffset:500}).addTo(G.amb).on('click',()=>pick(v.id));m._a={f:to,t:to,t0:0}}
+  else{const c=m.getLatLng();m._a={f:[c.lat,c.lng],t:to,t0:performance.now()}}
+  S.trail[v.id]=S.trail[v.id]||L.polyline([],{color:COL[v.status],weight:3,opacity:.9}).addTo(G.trail);S.trail[v.id].setLatLngs(v.trail).setStyle({color:COL[v.status]});
+  if(v.route_id&&S.rid[v.id]!==v.route_id){S.rid[v.id]=v.route_id;fetch('/api/routes/'+v.id).then(r=>r.json()).then(r=>{S.planned[v.id]&&G.planned.removeLayer(S.planned[v.id]);S.planned[v.id]=L.polyline(r.points,{color:'#8fb8ff',weight:4,opacity:.55,dashArray:'2 8'}).addTo(G.planned)})}
+  S.rec[v.id]&&(G.rec.removeLayer(S.rec[v.id]),delete S.rec[v.id]);
+  if(v.best)S.rec[v.id]=L.polyline(v.best.points,{color:'#2ecc71',weight:5,opacity:.9}).bindTooltip('Recommended Route '+v.best.label+' — '+v.id).addTo(G.rec)});
+ G.dev.clearLayers();s.vehicles.forEach(v=>{if(v.dev.deviated&&v.dev.nearest){L.circle(v.dev.nearest,{radius:Math.max(v.dev.distance_m,sys.dev_threshold),color:'#ff3b4e',weight:1,fillOpacity:.12}).addTo(G.dev);L.polyline([v.dev.nearest,[v.lat,v.lon]],{color:'#ff3b4e',weight:2,dashArray:'4'}).addTo(G.dev)}});
+ G.traffic.clearLayers();G.inc.clearLayers();s.incidents.forEach(i=>{const sim=i.source==='SIMULATION'?' [SIMULATION]':'';
+  if(i.kind==='congestion')L.circle([i.lat,i.lon],{radius:i.radius_m,color:'#ff9f1c',weight:1,fillOpacity:.25}).bindTooltip('Congestion'+sim).addTo(G.traffic);
+  else{L.marker([i.lat,i.lon],{icon:L.divIcon({className:'',html:`<div class="hosp" style="color:#ff9f1c;border-color:#ff9f1c;background:#1a1206">${i.kind==='accident'?'!':'✕'}</div>`,iconSize:[22,22]})}).bindTooltip(i.kind+sim).addTo(G.inc);L.circle([i.lat,i.lon],{radius:i.radius_m,color:'#ff9f1c',weight:1,fillOpacity:.1}).addTo(G.traffic)}});
+ $('#alerts').innerHTML=s.alerts.map(a=>`<div><time>${a.ts}</time><span class="${a.level==='crit'?'crit':a.level==='warn'?'warn':a.level==='ok'?'ok':''}">${a.level==='crit'||a.level==='warn'?'⚠':a.level==='ok'?'✓':'•'} ${esc(a.vehicle_id?a.vehicle_id+' ':'')}${esc(a.message)}</span></div>`).join('');
+ $('#foot').innerHTML=`<span><b>${sys.online}</b> / ${sys.total} VEHICLES ONLINE</span><span><b>${sys.deviations}</b> DEVIATION</span><span><b>${sys.delays}</b> DELAY</span><span><b>${sys.backups}</b> BACKUP REC</span><span>ROUTING: <b>${sys.routing.toUpperCase()}</b>${sys.routing==='fallback'?' (fallback estimate)':''}</span><span>SYSTEM HEALTH <b class="${sys.routing==='fallback'?'warn':'ok'}">${sys.routing==='fallback'?'DEGRADED':'OK'}</b></span>`;
+ draw()}
+(function anim(){const n=performance.now();for(const id in S.mk){const a=S.mk[id]._a;if(!a)continue;const p=Math.min(1,(n-a.t0)/1000);S.mk[id].setLatLng([a.f[0]+(a.t[0]-a.f[0])*p,a.f[1]+(a.t[1]-a.f[1])*p])}requestAnimationFrame(anim)})();
+function connect(){const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');ws.onmessage=e=>update(JSON.parse(e.data));ws.onclose=()=>{$('#livetxt').textContent='RECONNECTING';setTimeout(connect,2000)}}
+connect();
+</script></body></html>

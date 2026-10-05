@@ -1,0 +1,16 @@
+# SIMULATED multipliers - illustrative values, NOT measured Bengaluru traffic statistics.
+traffic:
+  morning_peak: {start: 8,  end: 11, multiplier: 1.5}
+  afternoon:    {start: 11, end: 16, multiplier: 1.0}
+  evening_peak: {start: 16, end: 21, multiplier: 1.7}
+  night:        {multiplier: 0.8}
+scoring:            # route score: lower is better (emergency priority = HIGH)
+  time: 0.5
+  congestion: 0.2
+  incident_risk: 0.2
+  distance: 0.1
+dispatch:
+  critical_delay_min: 10
+  warn_delay_min: 3
+  free_flow_kmh: 35
+  road_factor: 1.3
